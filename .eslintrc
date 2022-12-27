@@ -11,16 +11,22 @@
   "parser": "@typescript-eslint/parser",
   "plugins": ["@typescript-eslint"],
   "rules": {
-    "indent": ["error", 2],
+    "indent": ["error", 2, {
+      "SwitchCase": 1
+    }],
     "linebreak-style": ["error", "unix"],
     "quotes": ["error", "single"],
-    "semi": ["error", "never"],
+    "semi": ["error", "always"],
     "complexity": ["error", 10],
     "max-statements": ["error", 23],
+    "comma-dangle": ["error", "always-multiline"],
     "@typescript-eslint/explicit-function-return-type": "off",
     "@typescript-eslint/interface-name-prefix": "off",
     "@typescript-eslint/member-delimiter-style": ["error", {
-      "multiline": { "delimiter": "none" }
+      "multiline": {
+        "delimiter": "semi",
+        "requireLast": true
+      }
     }]
   },
   "overrides": [

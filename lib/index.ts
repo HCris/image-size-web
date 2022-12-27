@@ -1,18 +1,6 @@
-import * as fs from 'fs'
-import * as path from 'path'
-import Queue from 'queue'
-import { typeHandlers, imageType } from './types'
-import { detector } from './detector'
-import { ISizeCalculationResult } from './types/interface'
-
-type CallbackFn = (e: Error | null, r?: ISizeCalculationResult) => void
-
-// Maximum buffer size, with a default of 512 kilobytes.
-// TO-DO: make this adaptive based on the initial signature of the image
-const MaxBufferSize = 512 * 1024
-
-// This queue is for async `fs` operations, to avoid reaching file-descriptor limits
-const queue = new Queue({ concurrency: 100, autostart: true })
+import { typeHandlers, imageType } from './types';
+import { detector } from './detector';
+import { ISizeCalculationResult } from './types/interface';
 
 interface Options {
   disabledFS: boolean
@@ -21,119 +9,55 @@ interface Options {
 
 const globalOptions: Options = {
   disabledFS: false,
-  disabledTypes: []
-}
+  disabledTypes: [],
+};
 
 /**
  * Return size information based on a buffer
  *
  * @param {Buffer} buffer
- * @param {String} filepath
  * @returns {Object}
  */
-function lookup(buffer: Buffer, filepath?: string): ISizeCalculationResult {
-  // detect the file type.. don't rely on the extension
-  const type = detector(buffer)
+function lookup(buffer: Buffer): ISizeCalculationResult {
+  // detect the file type... don't rely on the extension
+  const type = detector(buffer);
 
   if (typeof type !== 'undefined') {
     if (globalOptions.disabledTypes.indexOf(type) > -1) {
-      throw new TypeError('disabled file type: ' + type)
+      throw new TypeError('disabled file type: ' + type);
     }
 
     // find an appropriate handler for this file type
     if (type in typeHandlers) {
-      const size = typeHandlers[type].calculate(buffer, filepath)
+      const size = typeHandlers[type].calculate(buffer);
       if (size !== undefined) {
-        size.type = type
-        return size
+        size.type = type;
+        return size;
       }
     }
   }
 
 
   // throw up, if we don't understand the file
-  throw new TypeError('unsupported file type: ' + type + ' (file: ' + filepath + ')')
-}
-
-/**
- * Reads a file into a buffer.
- * @param {String} filepath
- * @returns {Promise<Buffer>}
- */
-async function asyncFileToBuffer(filepath: string): Promise<Buffer> {
-  const handle = await fs.promises.open(filepath, 'r')
-  try {
-    const { size } = await handle.stat()
-    if (size <= 0) {
-      throw new Error('Empty file')
-    }
-    const bufferSize = Math.min(size, MaxBufferSize)
-    const buffer = Buffer.alloc(bufferSize)
-    await handle.read(buffer, 0, bufferSize, 0)
-    return buffer
-  } finally {
-    await handle.close()
-  }
-}
-
-/**
- * Synchronously reads a file into a buffer, blocking the nodejs process.
- *
- * @param {String} filepath
- * @returns {Buffer}
- */
-function syncFileToBuffer(filepath: string): Buffer {
-  // read from the file, synchronously
-  const descriptor = fs.openSync(filepath, 'r')
-  try {
-    const { size } = fs.fstatSync(descriptor)
-    if (size <= 0) {
-      throw new Error('Empty file')
-    }
-    const bufferSize = Math.min(size, MaxBufferSize)
-    const buffer = Buffer.alloc(bufferSize)
-    fs.readSync(descriptor, buffer, 0, bufferSize, 0)
-    return buffer
-  } finally {
-    fs.closeSync(descriptor)
-  }
+  throw new TypeError(`unsupported file type: ${type}`);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-use-before-define
-module.exports = exports = imageSize // backwards compatibility
+module.exports = exports = imageSize; // backwards compatibility
 
-export default imageSize
-export function imageSize(input: Buffer | string): ISizeCalculationResult
-export function imageSize(input: string, callback: CallbackFn): void
+export default imageSize;
+export function imageSize(input: Buffer): ISizeCalculationResult
 
 /**
- * @param {Buffer|string} input - buffer or relative/absolute path of the image file
- * @param {Function=} [callback] - optional function for async detection
+ * @param {Buffer} input - buffer or relative/absolute path of the image file
  */
-export function imageSize(input: Buffer | string, callback?: CallbackFn): ISizeCalculationResult | void {
+export function imageSize(input: Buffer): ISizeCalculationResult {
   // Handle buffer input
-  if (Buffer.isBuffer(input)) {
-    return lookup(input)
+  if (!Buffer.isBuffer(input)) {
+    throw new TypeError('invalid invocation. input should be a Buffer');
   }
 
-  // input should be a string at this point
-  if (typeof input !== 'string' || globalOptions.disabledFS) {
-    throw new TypeError('invalid invocation. input should be a Buffer')
-  }
-
-  // resolve the file path
-  const filepath = path.resolve(input)
-  if (typeof callback === 'function') {
-    queue.push(() => asyncFileToBuffer(filepath)
-      .then((buffer) => process.nextTick(callback, null, lookup(buffer, filepath)))
-      .catch(callback))
-  } else {
-    const buffer = syncFileToBuffer(filepath)
-    return lookup(buffer, filepath)
-  }
+  return lookup(input);
 }
 
-export const disableFS = (v: boolean): void => { globalOptions.disabledFS = v }
-export const disableTypes = (types: imageType[]): void => { globalOptions.disabledTypes = types }
-export const setConcurrency = (c: number): void => { queue.concurrency = c }
-export const types = Object.keys(typeHandlers)
+export const types = Object.keys(typeHandlers);

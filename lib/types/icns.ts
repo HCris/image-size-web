@@ -1,4 +1,4 @@
-import { IImage, ISize } from './interface'
+import { IImage, ISize } from './interface';
 
 /**
  * ICNS Header
@@ -8,8 +8,8 @@ import { IImage, ISize } from './interface'
  * | 4      | 4    | Length of file, in bytes, msb first.                   |
  *
  */
-const SIZE_HEADER = 4 + 4 // 8
-const FILE_LENGTH_OFFSET = 4 // MSB => BIG ENDIAN
+const SIZE_HEADER = 4 + 4; // 8
+const FILE_LENGTH_OFFSET = 4; // MSB => BIG ENDIAN
 
 /**
  * Image Entry
@@ -19,7 +19,7 @@ const FILE_LENGTH_OFFSET = 4 // MSB => BIG ENDIAN
  * | 4      | 4    | Length of data, in bytes (including type and length), msb first. |
  * | 8      | n    | Icon data                                                        |
  */
-const ENTRY_LENGTH_OFFSET = 4 // MSB => BIG ENDIAN
+const ENTRY_LENGTH_OFFSET = 4; // MSB => BIG ENDIAN
 
 const ICON_TYPE_SIZE: {[key: string]: number} = {
   ICON: 32,
@@ -62,52 +62,52 @@ const ICON_TYPE_SIZE: {[key: string]: number} = {
   ic14: 512,
   // . => 1024 x 1024
   ic10: 1024,
-}
+};
 
 function readImageHeader(buffer: Buffer, imageOffset: number): [string, number] {
-  const imageLengthOffset = imageOffset + ENTRY_LENGTH_OFFSET
+  const imageLengthOffset = imageOffset + ENTRY_LENGTH_OFFSET;
   return [
     buffer.toString('ascii', imageOffset, imageLengthOffset),
-    buffer.readUInt32BE(imageLengthOffset)
-  ]
+    buffer.readUInt32BE(imageLengthOffset),
+  ];
 }
 
 function getImageSize(type: string): ISize {
-  const size = ICON_TYPE_SIZE[type]
-  return { width: size, height: size, type }
+  const size = ICON_TYPE_SIZE[type];
+  return { width: size, height: size, type };
 }
 
 export const ICNS: IImage = {
   validate(buffer) {
-    return ('icns' === buffer.toString('ascii', 0, 4))
+    return ('icns' === buffer.toString('ascii', 0, 4));
   },
 
   calculate(buffer) {
-    const bufferLength = buffer.length
-    const fileLength = buffer.readUInt32BE(FILE_LENGTH_OFFSET)
-    let imageOffset = SIZE_HEADER
+    const bufferLength = buffer.length;
+    const fileLength = buffer.readUInt32BE(FILE_LENGTH_OFFSET);
+    let imageOffset = SIZE_HEADER;
 
-    let imageHeader = readImageHeader(buffer, imageOffset)
-    let imageSize = getImageSize(imageHeader[0])
-    imageOffset += imageHeader[1]
+    let imageHeader = readImageHeader(buffer, imageOffset);
+    let imageSize = getImageSize(imageHeader[0]);
+    imageOffset += imageHeader[1];
 
     if (imageOffset === fileLength) {
-      return imageSize
+      return imageSize;
     }
 
     const result = {
       height: imageSize.height,
       images: [imageSize],
-      width: imageSize.width
-    }
+      width: imageSize.width,
+    };
 
     while (imageOffset < fileLength && imageOffset < bufferLength) {
-      imageHeader = readImageHeader(buffer, imageOffset)
-      imageSize = getImageSize(imageHeader[0])
-      imageOffset += imageHeader[1]
-      result.images.push(imageSize)
+      imageHeader = readImageHeader(buffer, imageOffset);
+      imageSize = getImageSize(imageHeader[0]);
+      imageOffset += imageHeader[1];
+      result.images.push(imageSize);
     }
 
-    return result
-  }
-}
+    return result;
+  },
+};
